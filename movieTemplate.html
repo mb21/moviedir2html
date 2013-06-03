@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link href="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.2/css/bootstrap-combined.min.css" rel="stylesheet">
+        <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.0.7/angular.min.js"></script>
+<style>
+li.movie {
+    list-style-type: none;
+}
+li.movie h2 {
+    margin-top: 50px;
+}
+li.movie h2 a{
+    color: black;
+}
+.movie ul {
+    margin-left: 1em;
+}
+.genres{
+    float: right;
+}
+.genres li {
+    background-color: #0088cc;
+}
+.genres a{
+    color: white;
+    text-decoration: none;
+}
+ul.ratings{
+    padding-left: 0;
+    margin-left: 0;
+    font-weight: bold;
+}
+.ratings li {
+    width: 35px;
+    height: 45px;
+}
+.ratings .imdb {
+    background: url('http://z-ecx.images-amazon.com/images/G/01/imdb/images/title/titlePageSprite-2288315300._V_.png');
+    background-size: 230px;
+    background-position: -152px -61px;
+}
+.ratings .imdb span {
+    color: black;
+    position: relative;
+    top: 14px;
+    left: 7px;
+}
+.ratings .rotten {
+    background: url('http://images.rottentomatoes.com/images/tomatometer/rt_lg.png?v=20130423');
+}
+.ratings .rotten span {
+    color: white;
+    position: relative;
+    top: 19px;
+    left: 6px;
+}
+.sticker{
+    margin: 5px;
+    padding: 3px 8px;
+    border-radius: 5px;
+    color: white;
+    list-style-type: none;
+    float: left;
+}
+.searchBox {
+    margin: 25px;
+}
+.texts {
+    margin-top: 10px;
+}
+</style>
+<script>
+var json = %%%%%json%%%%%;
+
+function MoviesCtrl($scope) {
+    $scope.movies = json;
+    
+    $scope.genres = [];
+    var allObj = {"name": "All"};
+    $scope.selectedGenre = allObj;
+
+    $scope.init = function(){
+        var genresArr = [];
+        angular.forEach( $scope.movies, function(movie) {
+            angular.forEach( movie.genres, function(genre) {
+                genre = genre.trim()
+                if (genresArr.indexOf(genre) < 0) {
+                    genresArr.push(genre);
+                }
+            });
+            //add genre "All" to each movie
+            movie.genres.push("All");
+        });
+        
+        genresArr.sort();
+
+        angular.forEach( genresArr, function(g) {
+            $scope.genres.push( {"name": g} );
+        });
+
+        // add "All" genre to the beginning
+        $scope.genres.unshift( allObj );
+    }
+
+    $scope.makeWikiLink = function(str) {
+        return "http://www.google.com/search?q="+encodeURIComponent(str)+"&domains=http%3A%2F%2Fen.wikipedia.org&sitesearch=http%3A%2F%2Fen.wikipedia.org&btnI=Auf+gut+Gl%C3%BCck%21";
+    }
+    $scope.makeRottenLink = function(str) {
+        return "http://www.google.com/search?q="+encodeURIComponent(str)+"&domains=http%3A%2F%2Frottentomatoes.com&sitesearch=http%3A%2F%2Frottentomatoes.com&btnI=Auf+gut+Gl%C3%BCck%21";
+    }
+
+}
+
+</script>
+    </head>
+    <body ng-app>
+    <div class="container" ng-controller="MoviesCtrl" ng-init="init()">
+        <div class="row">
+            <div class="span12">
+                
+                <div class="searchBox">
+                    <input ng-model="search" type="text" placeholder="Search"/>
+
+                    <select ng-model="selectedGenre" ng-options="genre.name for genre in genres">
+                    </select>
+                </div>
+
+                <ul>
+                    <li ng-repeat="movie in movies | filter:{genres: selectedGenre.name} | filter:search" class="movie"
+                        ng-init="omdbLink='http://imdb.com/title/' + movie.omdb.imdbID; omdb=movie.omdb;" >
+                        <h2><a href="{{movie.path}}" target="_blank">{{omdb.Title || movie.title}}
+                            <span ng-show="movie.isEmptyDir"> (Not Downloaded)</span>
+                        </a></h2>
+
+                        <div class="row">
+                            <div class="span2">
+                                <a href="{{movie.path}}" target="_blank" ng-show="omdb">
+                                    <img src="{{omdb.Poster}}" ng-show="omdb.Poster" width="150" />
+                                </a>
+                                <ul class="ratings" ng-show="omdb">
+                                    <a href="{{omdbLink}}" target="_blank"><li class="sticker imdb">
+                                        <span>{{omdb.imdbRating}}</span>
+                                    </li></a>
+                                    <a href="{{makeRottenLink(omdb.Title)}}" target="_blank"><li class="sticker rotten">
+                                        <span>{{omdb.tomatoRating}}</span>
+                                    </li></a>
+                                </ul>
+                            </div>
+                            <div class="span8">
+                                <ul class="genres">
+                                    <li ng-repeat="genre in movie.genres | filter: '!all'" class="sticker">
+                                        <a href="#" ng-click="$parent.$parent.selectedGenre.name=genre">{{genre}}</a>
+                                    </li>
+                                </ul>
+
+                                <ul>
+                                    <li>
+                                        <span ng-show="omdb.Released">{{rel=omdb.Released; rel.substring(rel.length-4)}}, </span>
+                                        <span ng-show="!omdb.Released && movie.year">{{movie.year}}, </span>
+                                        <span ng-show="omdb">{{movie.runtime}}, </span>
+                                        <span ng-show="movie.quality">{{movie.quality}}</span>
+                                    </li>
+                                    <li ng-show="omdb">
+                                        Director: <a href="{{makeWikiLink(omdb.Director+' director')}}" target="_blank">{{omdb.Director}}</a>
+                                    </li>
+                                    <li class="actors" ng-show="omdb">
+                                        <span>Actors: </span>
+                                        <span ng-repeat="actor in movie.actors">
+                                            <a href="{{makeWikiLink(actor+' actor')}}" target="_blank">{{actor}}</a>
+                                            <span ng-hide="$last">,</span> 
+                                        </span>
+                                    </li>
+                                </ul>
+                                
+                                <div class="texts" ng-show="omdb">
+                                    <p><strong>Tomato Consensus:</strong> {{omdb.tomatoConsensus}}</p>
+                                    <p><strong>Plot:</strong> {{omdb.Plot}}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    </body>
+</html>

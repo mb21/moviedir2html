@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 
-import sys, os, re, json, urllib, requests, time
+import sys, os, re, json, urllib, requests, time, HTMLParser
 from datetime import date
 
 # words ignored in a filename when searching on the internets
-blacklist = map(lambda x:x.lower(), ["directorscut", "dts", "aac", "ac3", "uk-release", "release", "screener", "uncut"] )
+blacklist = map(lambda x:x.lower(), ["directorscut", "dts", "aac", "ac3", "uk-release", "release", "screener", "uncut", "cd1", "cd2"] )
 
+h = HTMLParser.HTMLParser()
 
 def getMovie(filename):
     "Reads out details from a movie title filename string and returns a dictionary"
@@ -60,22 +61,54 @@ def getMovie(filename):
 
 def fillInFromOmdb(movie):
     "fills in data from www.omdbapi.com"
-    parameters = [
-        ("t", movie['title']),
-        ("y", movie['year']),
-        ("tomatoes", "true"),
-        ("plot", "full")
-    ]
-    query = urllib.urlencode(parameters, True)
-    r = requests.get("http://www.omdbapi.com/?" + query)
-    omdb = json.loads(r.content)
-    if omdb['Response'] == "True":
-        movie['omdb'] = omdb
-        print "filled in " + movie['omdb']['Title']
+
+    def askOmdb(movie):
+        parameters = [
+            ("t", movie['title']),
+            ("y", movie['year']),
+            ("tomatoes", "true"),
+            ("plot", "full")
+        ]
+        query = urllib.urlencode(parameters, True)
+        r = requests.get("http://www.omdbapi.com/?" + query)
+        omdb = json.loads(r.content)
+
+        if omdb['Response'] == "True":
+            if len( omdb['tomatoRating'] ) == 1:
+                omdb['tomatoRating'] = omdb['tomatoRating'] + ".0"
+            if len( omdb['tomatoConsensus'] ) == 1:
+                omdb['tomatoConsensus'] = h.unescape(omdb['tomatoConsensus'])
+            movie['omdb'] = omdb
+            movie['genres'] = omdb['Genre'].split(",")
+            movie['actors'] = omdb['Actors'].split(",")
+            movie['runtime'] = omdb['Runtime'].replace(" h ", ":").replace(" min", "")
+            print "filled in " + movie['omdb']['Title']
+
+            return movie
+        else:
+            return {}
+
+    res = askOmdb(movie)
+    if res:
+        movie = res
     else:
-        print "couldn't find " + movie['title']
-        # TODO: Google it with https://developers.google.com/custom-search/v1/overview
-        # Google API limit: 100 queries per day
+        gquery = 'http://www.google.com/search?q='+urllib.quote_plus(movie['title'])+' film'+'&domains=http%3A%2F%2Fen.wikipedia.org&sitesearch=http%3A%2F%2Fen.wikipedia.org&btnI=Auf+gut+Gl%C3%BCck%21'
+        gr = requests.get(gquery)
+        #TODO: check if redirected to wikipedia or stayed at google
+        matches = re.findall(r'<title>.*</title>', gr.content)
+        if matches:
+            title = matches[0][7:-43]
+            tmatch = re.findall(r' \([a-zA-Z0-9 ]*\)$', title)
+            if tmatch:
+                title = title.replace(tmatch[0], "")
+            print "found on wiki: " + matches[0] + " -> " + title
+            movie['title'] = title
+            res = askOmdb(movie)
+            if res:
+                movie = res
+            else:
+                movie['genres'] = ["Unknown"]
+                print "couldn't find " + movie['title']
 
     return movie
 
@@ -131,5 +164,16 @@ for root, subFolders, files in os.walk(rootdir):
         movie['directory'] = os.path.abspath(root) 
         movies = checkAndFillIn(movie, movies)
 
+def getTitle(movie):
+    if 'omdb' in movie:
+        title = "".join( filter( lambda x: ord(x)<128, movie['omdb']['Title'] ))
+        return title
+    else:
+        title = "".join( filter( lambda x: ord(x)<128, movie['title'] ))
+        return title
+
+movies.sort(key=getTitle) 
+
 f.write( json.dumps(movies) )
 f.close()
+
