@@ -63,7 +63,6 @@ def getMovie(filename):
     title = title.strip()
     upperCaseTitle = upperCaseTitle[:len(title)]
             
-    
     movie = {}
     movie['filename'] = filename
     movie['title'] = title
@@ -205,28 +204,28 @@ for root, subFolders, files in os.walk(rootdir):
         if not blacklisted:
             try:
                 movie = getMovie(filename)
+                if "CD1" in filename:
+                    movie['isMultiPartMovie'] = True
+                if movie['suffix'] in ["mov", "mp4", "avi", "mkv", "mpg"]:
+                    movie['isEmptyDir'] = False
+                    movie['path'] = os.path.abspath(os.path.join(root, filename)) 
+                    movie['directory'] = os.path.abspath(root) 
+                    movies = checkAndFillIn(movie, movies)
             except Exception as e:
-                print "Error in: " + movie['title']
+                print "Error in: " + filename
                 print e
-            if "CD1" in filename:
-                movie['isMultiPartMovie'] = True
-            if movie['suffix'] in ["mov", "mp4", "avi", "mkv", "mpg"]:
-                movie['isEmptyDir'] = False
-                movie['path'] = os.path.abspath(os.path.join(root, filename)) 
-                movie['directory'] = os.path.abspath(root) 
-                movies = checkAndFillIn(movie, movies)
 
     if len(filterHiddenFiles( os.listdir(root) )) == 0 and isNotHiddenFile(root):
         # empty folder, treat as movie
         try:
             movie = getMovie(root)
+            movie['isEmptyDir'] = True
+            movie['path'] = os.path.abspath(root) 
+            movie['directory'] = os.path.abspath(root) 
+            movies = checkAndFillIn(movie, movies)
         except Exception as e:
-            print "Error in: " + movie['title']
+            print "Error in: " + filename
             print e
-        movie['isEmptyDir'] = True
-        movie['path'] = os.path.abspath(root) 
-        movie['directory'] = os.path.abspath(root) 
-        movies = checkAndFillIn(movie, movies)
 
 def getAsciiTitle(movie):
     if 'omdb' in movie:
