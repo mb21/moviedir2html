@@ -227,17 +227,17 @@ for root, subFolders, files in os.walk(rootdir):
             print "Error in: " + filename
             print e
 
-def getAsciiTitle(movie):
+def titleSortKey(movie):
     if 'omdb' in movie:
-        title = movie['omdb']['Title']
+        title = movie['omdb']['Title'].lower()
     else:
-        title = movie['title']
-    matches = re.findall(r'^(The |A )', title)
+        title = movie['title'].lower()
+    matches = re.findall(r'^(the |a |an )', title)
     if matches:
         title = title.replace(matches[0], "")
-    return toAscii( title.lower() )
+    return toAscii(title)
 
-movies.sort(key=getAsciiTitle) 
+movies.sort(key=titleSortKey)
 json = json.dumps(movies)
 
 # write cache file
