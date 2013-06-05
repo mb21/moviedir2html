@@ -10,12 +10,11 @@ h = HTMLParser.HTMLParser()
 
 def getMovie(filename):
     "Reads out details from a movie title filename string and returns a dictionary"
-    #nicu : ev. nicht lower auf title machen, damit am schluss titel ausgegeben werden kann
-    
-
     
     filename = os.path.basename(filename)
-    title = filename.lower()
+    upperCaseTitle = filename
+    upperCaseTitle = upperCaseTitle.replace(";", ":")
+    title = upperCaseTitle.lower()
     
     # title
     for word in blacklist:
@@ -52,7 +51,7 @@ def getMovie(filename):
         suffix = ""
 
     title = title.strip()
-    upperCaseTitle = filename[0:len(title)] #nicu
+    upperCaseTitle = upperCaseTitle[:len(title)]
             
     
     movie = {}
@@ -62,7 +61,7 @@ def getMovie(filename):
     movie['quality'] = quality
     movie['suffix'] = suffix
     movie['comment'] = ""
-    movie['upperCaseTitle'] = upperCaseTitle #nicu
+    movie['upperCaseTitle'] = upperCaseTitle
     return movie
 
 
@@ -89,16 +88,18 @@ def fillInFromOmdb(movie):
             movie['genres'] = omdb['Genre'].split(",")
             movie['actors'] = omdb['Actors'].split(",")
             movie['runtime'] = omdb['Runtime'].replace(" h ", ":").replace(" min", "")
-        
-            short = re.findall(r':\d$', movie['runtime']) #nicu 2:4 sollte 2:04 sein kommt von 2 h 4 min...
-            if short:
-                short = movie['runtime'][-2:] #noetig wegen type error, obwohl in short schon gewuenschter string sein muesste
-                movie['runtime'] = movie['runtime'].replace(short, ":0"+short[-1])
-        
-            shortHour = re.findall(r' h$', movie['runtime']) #nicu 2 h soll 2:00 sein
-            if shortHour:
-                shortHour = movie['runtime'][-2:]
-                movie['runtime'] = movie['runtime'].replace(shortHour, ":00")
+            
+            # "2:4" -> "2:04"
+            shortMatches = re.findall(r':\d$', movie['runtime'])
+            if shortMatches:
+                runtimeMin = movie['runtime'][-2:]
+                movie['runtime'] = movie['runtime'].replace(runtimeMin, ":0"+runtimeMin[-1])
+            
+            # "2 h" -> "2:00"
+            shortHourMatches = re.findall(r' h$', movie['runtime'])
+            if shortHourMatches:
+                runtimeHour = movie['runtime'][-2:]
+                movie['runtime'] = movie['runtime'].replace(runtimeHour, ":00")
                     
             print "filled in " + movie['omdb']['Title']
 
@@ -111,28 +112,25 @@ def fillInFromOmdb(movie):
     if res:
         movie = res
     else:
-        #gquery = 'http://www.google.com/search?q='+urllib.quote_plus(movie['title'])+' film'+'&domains=http%3A%2F%2Fen.wikipedia.org&sitesearch=http%3A%2F%2Fen.wikipedia.org&btnI=Auf+gut+Gl%C3%BCck%21'
+        # search imdb with google
+        gquery = 'http://www.google.com/search?q='+urllib.quote_plus(movie['title'])+' film'+'&domains=http%3A%2F%2Fimdb.com&sitesearch=http%3A%2F%2Fimdb.com&btnI=Auf+gut+Gl%C3%BCck%21'
         
-        gquery = 'http://www.google.com/search?q='+urllib.quote_plus(movie['title'])+' film'+'&domains=http%3A%2F%2Fimdb.com&sitesearch=http%3A%2F%2Fimdb.com&btnI=Auf+gut+Gl%C3%BCck%21'  #nicu
-        
-        gr = requests.get(gquery)
-        #TODO: check if redirected to wikipedia or stayed at google
-        #TODO: if not found at all, it adds the movie again the next time, if not in proper unicode! see console output
-        # if found on wiki, but not on omdb, use filename, not what found on wiki!
+        gr = requests.get(gquery, headers={'Accept-Language': 'en-US'})
+        #TODO: check if redirected to imdb or stayed at google
         matches = re.findall(r'<title>.*</title>', gr.content)
         if matches:
-            title = matches[0][7:-15]  #nicu changed -43 to -15
+            title = matches[0][7:-15]
             tmatch = re.findall(r' \([a-zA-Z0-9 ]*\)$', title)
             if tmatch:
                 title = title.replace(tmatch[0], "")
-            print "found on wiki: " + matches[0] + " -> " + title
+            print "found on imdb: " + matches[0] + " -> " + title
             movie['title'] = title
             res = askOmdb(movie)
             if res:
                 movie = res
             else:
                 movie['genres'] = ["Unknown"]
-                movie['title'] = movie['upperCaseTitle'] #nicu
+                movie['title'] = movie['upperCaseTitle']
                 print "couldn't find " + movie['title']
 
     return movie
@@ -173,8 +171,8 @@ f = open(jsonfile, 'w')
 for root, subFolders, files in os.walk(rootdir):
 
     for filename in files:
-        reg = re.findall(r'^._', filename)  #nicu
-        if not reg:   #nicu
+        hiddenFilesMatches = re.findall(r'^.', filename)
+        if not hiddenFilesMatches:
             movie = getMovie(filename)
             if movie['suffix'] in ["mov", "mp4", "avi", "mkv", "mpg"]:
                 movie['isEmptyDir'] = False
@@ -184,8 +182,8 @@ for root, subFolders, files in os.walk(rootdir):
 
     if not os.listdir(root):
         # empty folder, treat as movie
-        reg = re.findall(r'\^._', root)  #nicu
-        if not reg:   #nicu
+        hiddenFilesMatches = re.findall(r'\^.', root)
+        if not hiddenFilesMatches:
             movie = getMovie(root)
             movie['isEmptyDir'] = True
             movie['path'] = os.path.abspath(root) 
