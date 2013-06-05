@@ -6,17 +6,19 @@ from datetime import date
 # words ignored in a filename when searching on the internets
 blacklist = map(lambda x:x.lower(), ["directorscut", "dts", "aac", "ac3", "uk-release", "release", "screener", "uncut", "cd1", "cd2"] )
 
-h = HTMLParser.HTMLParser()
+filenameBlacklist = ["CD2", "CD3", "CD4"]
+
+htmlParser = HTMLParser.HTMLParser()
 
 def getMovie(filename):
-    "Reads out details from a movie title filename string and returns a dictionary"
+    "Reads out details from a movie title filename string and returns a dictionary contaning imdb info"
     
     filename = os.path.basename(filename)
+
+    # title
     upperCaseTitle = filename
     upperCaseTitle = upperCaseTitle.replace(";", ":")
     title = upperCaseTitle.lower()
-    
-    # title
     for word in blacklist:
         title = title.replace(word, "")
 
@@ -79,11 +81,10 @@ def fillInFromOmdb(movie):
         r = requests.get("http://www.omdbapi.com/?" + query)
         omdb = json.loads(r.content)
 
-        if omdb['Response'] == "True":
+        if omdb['Response'] == "True" and omdb['Type'] == "movie":
             if len( omdb['tomatoRating'] ) == 1:
                 omdb['tomatoRating'] = omdb['tomatoRating'] + ".0"
-            if len( omdb['tomatoConsensus'] ) == 1:
-                omdb['tomatoConsensus'] = h.unescape(omdb['tomatoConsensus'])
+            omdb['tomatoConsensus'] = htmlParser.unescape(omdb['tomatoConsensus'])
             movie['omdb'] = omdb
             movie['genres'] = omdb['Genre'].split(",")
             movie['actors'] = omdb['Actors'].split(",")
@@ -101,7 +102,7 @@ def fillInFromOmdb(movie):
                 runtimeHour = movie['runtime'][-2:]
                 movie['runtime'] = movie['runtime'].replace(runtimeHour, ":00")
                     
-            print "filled in " + movie['omdb']['Title']
+            print "found with omdbapi: " + movie['omdb']['Title']
 
             return movie
         else:
@@ -112,7 +113,7 @@ def fillInFromOmdb(movie):
     if res:
         movie = res
     else:
-        # search imdb with google
+        # search IMDB with Google's i'm feeling lucky
         gquery = 'http://www.google.com/search?q='+urllib.quote_plus(movie['title'])+' film'+'&domains=http%3A%2F%2Fimdb.com&sitesearch=http%3A%2F%2Fimdb.com&btnI=Auf+gut+Gl%C3%BCck%21'
         
         gr = requests.get(gquery, headers={'Accept-Language': 'en-US'})
@@ -123,7 +124,7 @@ def fillInFromOmdb(movie):
             tmatch = re.findall(r' \([a-zA-Z0-9 ]*\)$', title)
             if tmatch:
                 title = title.replace(tmatch[0], "")
-            print "found on imdb: " + matches[0] + " -> " + title
+            print "found on IMDB with Google: " + matches[0] + " -> " + title
             movie['title'] = title
             res = askOmdb(movie)
             if res:
@@ -131,11 +132,12 @@ def fillInFromOmdb(movie):
             else:
                 movie['genres'] = ["Unknown"]
                 movie['title'] = movie['upperCaseTitle']
-                print "couldn't find " + movie['title']
+                print "couldn't find anywhere: " + movie['title'] + ", " + movie['year']
 
     return movie
 
 def checkAndFillIn(movie, movies):
+    "if movie not already in movies, add it with fillInFromOmdb"
     filenames = []
     for m in movies:
         filenames.append( m['filename'] )
@@ -145,11 +147,17 @@ def checkAndFillIn(movie, movies):
     return movies
 
 
+
 # MAIN
 
 if len(sys.argv) <= 2:
-    print "usage: movies.py directory file.json"
-    print "       Searches directory for movie files and prints into file.json"
+    print "usage: movies.py movie-directory file.json"
+    print "       Searches movie-directory recursively for movie files and"
+    print "       writes IMDB information into file.json."
+    print "       Filenames should be of format: 'US-Title (Year) 720p.mkv'"
+    print "       Empty folders are treated as movies names as well, other"
+    print "       folders are ignored. Semicolons (;) are treated as colons (:)"
+    print "       in names."
     sys.exit(0)
 
 rootdir = sys.argv[1]
@@ -160,6 +168,7 @@ if not os.path.isdir(rootdir):
 jsonfile = sys.argv[2]
 
 try:
+    # if jsonfile already exists, read in movies
     f = open(jsonfile, 'r')
     movies = json.loads( f.read() )
     f.close()
@@ -168,37 +177,44 @@ except IOError:
 
 f = open(jsonfile, 'w')
 
-def isHiddenFile(filename):
-    return len( re.findall(r'^\.', filename) ) > 0 )
+def isNotHiddenFile(filename):
+    return len( re.findall(r'^\.', filename) ) == 0
+
+def filterHiddenFiles(files):
+    return filter(isNotHiddenFile, files)
 
 for root, subFolders, files in os.walk(rootdir):
-    for filename in files:
-        if not isHiddenFile(filename):
+    for filename in filterHiddenFiles(files):
+        blacklisted = False
+        for word in filenameBlacklist:
+            if word in filename:
+                blacklisted = True
+        if not blacklisted:
             movie = getMovie(filename)
+            if "CD1" in filename:
+                movie['isMultiPartMovie'] = True
             if movie['suffix'] in ["mov", "mp4", "avi", "mkv", "mpg"]:
                 movie['isEmptyDir'] = False
                 movie['path'] = os.path.abspath(os.path.join(root, filename)) 
                 movie['directory'] = os.path.abspath(root) 
                 movies = checkAndFillIn(movie, movies)
 
-    if not os.listdir(root):
+    if len(filterHiddenFiles( os.listdir(root) )) == 0 and isNotHiddenFile(root):
         # empty folder, treat as movie
-        if not isHiddenFile(root):
-            movie = getMovie(root)
-            movie['isEmptyDir'] = True
-            movie['path'] = os.path.abspath(root) 
-            movie['directory'] = os.path.abspath(root) 
-            movies = checkAndFillIn(movie, movies)
+        movie = getMovie(root)
+        movie['isEmptyDir'] = True
+        movie['path'] = os.path.abspath(root) 
+        movie['directory'] = os.path.abspath(root) 
+        movies = checkAndFillIn(movie, movies)
 
-def getTitle(movie):
+def getAsciiTitle(movie):
     if 'omdb' in movie:
-        title = "".join( filter( lambda x: ord(x)<128, movie['omdb']['Title'].lower() )) #nicu : .lower()
-        return title
+        title = movie['omdb']['Title']
     else:
-        title = "".join( filter( lambda x: ord(x)<128, movie['title'].lower() )) #nicu : .lower()
-        return title
+        title = movie['title']
+    return "".join( filter(lambda x: ord(x)<128, title.lower()) )
 
-movies.sort(key=getTitle) 
+movies.sort(key=getAsciiTitle) 
 
 f.write( json.dumps(movies) )
 f.close()

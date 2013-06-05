@@ -110,6 +110,14 @@ function MoviesCtrl($scope) {
         return "http://www.google.com/search?q="+encodeURIComponent(str)+"&domains=http%3A%2F%2Frottentomatoes.com&sitesearch=http%3A%2F%2Frottentomatoes.com&btnI=Auf+gut+Gl%C3%BCck%21";
     }
 
+    $scope.getPath = function(movie) {
+        if (movie.isMultiPartMovie) {
+            return movie.directory;
+        } else {
+            return movie.path;
+        }
+    }
+
 }
 
 </script>
@@ -128,15 +136,15 @@ function MoviesCtrl($scope) {
 
                 <ul>
                     <li ng-repeat="movie in movies | filter:{genres: selectedGenre.name} | filter:search" class="movie"
-                        ng-init="omdbLink='http://imdb.com/title/' + movie.omdb.imdbID; omdb=movie.omdb;" >
-                        <h2><a href="{{movie.path}}" target="_blank">{{omdb.Title || movie.title}}
+                        ng-init="omdbLink='http://imdb.com/title/' + movie.omdb.imdbID; omdb=movie.omdb; path=getPath(movie)" >
+                        <h2><a href="{{path}}" target="_blank">{{omdb.Title || movie.title}}
                             <span ng-show="movie.isEmptyDir"> (Not Downloaded)</span>
                         </a></h2>
 
                         <div class="row">
                             <div class="span2">
-                                <a href="{{movie.path}}" target="_blank" ng-show="omdb">
-                                    <img src="{{omdb.Poster}}" ng-show="omdb.Poster" width="150" />
+                                <a href="{{path}}" target="_blank" ng-show="omdb">
+                                    <img src="{{omdb.Poster}}" ng-show="omdb.Poster && omdb.Poster != 'N/A'" width="150" />
                                 </a>
                                 <ul class="ratings" ng-show="omdb">
                                     <a href="{{omdbLink}}" target="_blank"><li class="sticker imdb">
@@ -156,9 +164,9 @@ function MoviesCtrl($scope) {
 
                                 <ul>
                                     <li>
-                                        <span ng-show="omdb.Released">{{rel=omdb.Released; rel.substring(rel.length-4)}}, </span>
-                                        <span ng-show="!omdb.Released && movie.year">{{movie.year}}, </span>
-                                        <span ng-show="omdb">{{movie.runtime}}, </span>
+                                        <span ng-show="omdb.Year">{{omdb.Year}}, </span>
+                                        <span ng-show="!omdb.Year && movie.year">{{movie.year}}, </span>
+                                        <span ng-show="omdb">{{movie.runtime}}<span ng-show="movie.quality">,</span> </span>
                                         <span ng-show="movie.quality">{{movie.quality}}</span>
                                     </li>
                                     <li ng-show="omdb">
