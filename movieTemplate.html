@@ -69,10 +69,15 @@ ul.ratings{
     background: white;
     position: relative;
     right: 40%;
-    top: -50px;
+    top: -100px;
+    box-shadow: 4px 4px 10px 3px rgba(0, 0, 0, .5);
 }
-.poster{
+.poster {
     width: 150px;
+}
+.posterDiv {
+    width: 150px;
+    height: 223px;
 }
 .searchBox {
     margin: 25px;
@@ -163,9 +168,12 @@ function MoviesCtrl($scope) {
 
                         <div class="row">
                             <div class="span2">
-                                <a href="{{makeWikiLink(movie.title+' film '+omdb.Year)}}" target="_blank" ng-show="omdb">
-                                    <img src="{{omdb.Poster}}" ng-show="omdb.Poster && omdb.Poster != 'N/A'" class="poster"/>
-                                </a>
+                                <div class=posterDiv>
+                                    <a href="{{makeWikiLink(movie.title+' film '+omdb.Year)}}" target="_blank" ng-show="omdb">
+                                        <img src="{{omdb.Poster}}" class="poster"
+                                            ng-show="omdb.Poster && omdb.Poster != 'N/A'" />
+                                    </a>
+                                </div>
                                 <ul class="ratings" ng-show="omdb">
                                     <a href="{{omdbLink}}" target="_blank"><li class="sticker imdb">
                                         <span>{{omdb.imdbRating}}</span>
