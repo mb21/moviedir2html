@@ -3,16 +3,20 @@
 import sys, os, re, json, urllib, requests, time, codecs, HTMLParser, argparse
 from datetime import date
 
+# wait time in seconds between omdb requests
+requestSleepTime = 0.2
+
 # words ignored in a filename when searching on the internets
-blacklist = map(lambda x:x.lower(), 
-    ["directorscut", "dts", "aac", "ac3", "uk-release", "release", "screener", "uncut", "cd1", "cd2"] )
+blacklist = ["directorscut", "dts", "aac", "ac3", "uk-release", "release", "screener", "uncut", "cd1", "cd2"]
 
 # if found in a filename, ignore that file
 filenameBlacklist = ["CD2", "CD3", "CD4"]
 
 templateDefaultName = os.path.dirname(__file__) + '/movieTemplate.html'
 
+
 htmlParser = HTMLParser.HTMLParser()
+blacklist = map(lambda x:x.lower(), blacklist)
 
 def toAscii(str):
     return "".join( filter(lambda x: ord(x)<128, str) )
@@ -93,8 +97,8 @@ def fillInFromOmdb(movie):
                 omdb['tomatoRating'] = omdb['tomatoRating'] + ".0"
             omdb['tomatoConsensus'] = htmlParser.unescape(omdb['tomatoConsensus'])
             movie['omdb'] = omdb
-            movie['genres'] = omdb['Genre'].split(",")
-            movie['actors'] = omdb['Actors'].split(",")
+            movie['genres'] = map(unicode.strip, omdb['Genre'].split(",") )
+            movie['actors'] = map(unicode.strip, omdb['Actors'].split(",") )
             movie['runtime'] = omdb['Runtime'].replace(" h ", ":").replace(" min", "")
             
             # "2:4" -> "2:04"
@@ -148,7 +152,7 @@ def checkAndFillIn(movie, movies):
     
     if not movie['filename'] in filenames:
         movies.append( fillInFromOmdb(movie) )
-        time.sleep(1)
+        time.sleep(requestSleepTime)
     return movies
 
 

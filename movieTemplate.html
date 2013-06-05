@@ -66,6 +66,10 @@ ul.ratings{
 .poster:hover{
     width: 300px;
     max-width: none;
+    background: white;
+    position: relative;
+    right: 40%;
+    top: -50px;
 }
 .poster{
     width: 150px;
@@ -83,8 +87,8 @@ var json = %%%%%json%%%%%;
 function MoviesCtrl($scope) {
     $scope.movies = json;
     
-    $scope.genres = [];
     var allObj = {"name": "All"};
+    $scope.genres = [allObj];
     $scope.selectedGenre = allObj;
 
     $scope.init = function(){
@@ -105,9 +109,14 @@ function MoviesCtrl($scope) {
         angular.forEach( genresArr, function(g) {
             $scope.genres.push( {"name": g} );
         });
+    }
 
-        // add "All" genre to the beginning
-        $scope.genres.unshift( allObj );
+    $scope.selectGenre = function(genreName){
+        angular.forEach( $scope.genres, function(g) {
+            if (g.name == genreName) {
+                $scope.selectedGenre = g;
+            }
+        });
     }
     
     $scope.makeGoogleLink = function(str, domain) {
@@ -169,7 +178,7 @@ function MoviesCtrl($scope) {
                             <div class="span8">
                                 <ul class="genres">
                                     <li ng-repeat="genre in movie.genres | filter: '!all'" class="sticker">
-                                        <a href="#" ng-click="$parent.$parent.selectedGenre.name=genre">{{genre}}</a>
+                                        <a href="#" ng-click="selectGenre(genre)">{{genre}}</a>
                                     </li>
                                 </ul>
 
