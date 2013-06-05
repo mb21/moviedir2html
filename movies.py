@@ -97,14 +97,12 @@ def fillInFromOmdb(movie):
             # "2:4" -> "2:04"
             shortMatches = re.findall(r':\d$', movie['runtime'])
             if shortMatches:
-                runtimeMin = movie['runtime'][-2:]
-                movie['runtime'] = movie['runtime'].replace(runtimeMin, ":0"+runtimeMin[-1])
+                movie['runtime'] = movie['runtime'][:-2] + ":0" + movie['runtime'][-1]
             
             # "2 h" -> "2:00"
             shortHourMatches = re.findall(r' h$', movie['runtime'])
             if shortHourMatches:
-                runtimeHour = movie['runtime'][-2:]
-                movie['runtime'] = movie['runtime'].replace(runtimeHour, ":00")
+                movie['runtime'] = movie['runtime'][:-2] + ":00"
                     
             print "found with omdbapi: " + movie['omdb']['Title']
 
@@ -117,7 +115,7 @@ def fillInFromOmdb(movie):
     res = askOmdb(movie)
     if not res:
         # search IMDB with Google's i'm feeling lucky
-        gquery = 'http://www.google.com/search?q='+urllib.quote_plus(movie['title'])+' film'+'&domains=http%3A%2F%2Fimdb.com&sitesearch=http%3A%2F%2Fimdb.com&btnI=Auf+gut+Gl%C3%BCck%21'
+        gquery = 'http://www.google.com/search?q='+urllib.quote_plus(movie['title'] + ' film')+'&domains=http%3A%2F%2Fimdb.com&sitesearch=http%3A%2F%2Fimdb.com&btnI=Auf+gut+Gl%C3%BCck%21'
         
         gr = requests.get(gquery, headers={'Accept-Language': 'en-US'})
         matches = re.findall(r'<title>.*</title>', gr.content)
@@ -134,7 +132,7 @@ def fillInFromOmdb(movie):
             else:
                 movie['genres'] = ["Unknown"]
                 movie['title'] = movie['upperCaseTitle']
-                print "couldn't find anywhere: " + title + ", " + movie['year']
+                print "couldn't find anywhere: '" + title + ", "' + movie['year']
 
     return movie
 
@@ -161,8 +159,8 @@ desc = """Searches directory recursively for movie files and
        in names. Multipart files should contain 'CD1' or 'CD2'."""
 
 parser = argparse.ArgumentParser(description=desc)
-parser.add_argument('--cache', help='reads from and/or writes a json cache file, movies are never deleted from the cache')
-parser.add_argument('--template', help='HTML template file to use (contains the string %%%%%%%%%%json%%%%%%%%%% where the json will be filled in)', default=templateDefaultName)
+parser.add_argument('--cache', help='generates or uses an existing json cache file, movies are never removed from the cache')
+parser.add_argument('--template', help='HTML template file to use (contains the string %%%%%%%%%%json%%%%%%%%%% where the json will be filled in), default is movieTemplate.html in the same directory as this script', default=templateDefaultName)
 parser.add_argument('directory', help='the directory to search for movie files')
 
 args = parser.parse_args()
@@ -200,7 +198,11 @@ for root, subFolders, files in os.walk(rootdir):
             if word in filename:
                 blacklisted = True
         if not blacklisted:
-            movie = getMovie(filename)
+            try:
+                movie = getMovie(filename)
+            except Exception as e:
+                print "Error in: " + movie['title']
+                print e
             if "CD1" in filename:
                 movie['isMultiPartMovie'] = True
             if movie['suffix'] in ["mov", "mp4", "avi", "mkv", "mpg"]:
@@ -211,7 +213,11 @@ for root, subFolders, files in os.walk(rootdir):
 
     if len(filterHiddenFiles( os.listdir(root) )) == 0 and isNotHiddenFile(root):
         # empty folder, treat as movie
-        movie = getMovie(root)
+        try:
+            movie = getMovie(root)
+        except Exception as e:
+            print "Error in: " + movie['title']
+            print e
         movie['isEmptyDir'] = True
         movie['path'] = os.path.abspath(root) 
         movie['directory'] = os.path.abspath(root) 
@@ -224,7 +230,7 @@ def getAsciiTitle(movie):
         title = movie['title']
     matches = re.findall(r'^(The |A )', title)
     if matches:
-        title = title.replace(matches[0], title)
+        title = title.replace(matches[0], "")
     return "".join( filter(lambda x: ord(x)<128, title.lower()) )
 
 movies.sort(key=getAsciiTitle) 
