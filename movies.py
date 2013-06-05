@@ -110,13 +110,12 @@ def fillInFromOmdb(movie):
 
             return movie
         else:
-            return {}
+            movie['genres'] = []
+            movie['actors'] = []
+            return False
 
     res = askOmdb(movie)
-    
-    if res:
-        movie = res
-    else:
+    if not res:
         # search IMDB with Google's i'm feeling lucky
         gquery = 'http://www.google.com/search?q='+urllib.quote_plus(movie['title'])+' film'+'&domains=http%3A%2F%2Fimdb.com&sitesearch=http%3A%2F%2Fimdb.com&btnI=Auf+gut+Gl%C3%BCck%21'
         
@@ -162,7 +161,7 @@ desc = """Searches directory recursively for movie files and
        in names. Multipart files should contain 'CD1' or 'CD2'."""
 
 parser = argparse.ArgumentParser(description=desc)
-parser.add_argument('--cache', help='reads from and/or writes a json cache file')
+parser.add_argument('--cache', help='reads from and/or writes a json cache file, movies are never deleted from the cache')
 parser.add_argument('--template', help='HTML template file to use (contains the string %%%%%%%%%%json%%%%%%%%%% where the json will be filled in)', default=templateDefaultName)
 parser.add_argument('directory', help='the directory to search for movie files')
 
@@ -223,6 +222,9 @@ def getAsciiTitle(movie):
         title = movie['omdb']['Title']
     else:
         title = movie['title']
+    matches = re.findall(r'^(The |A )', title)
+    if matches:
+        title = title.replace(matches[0], title)
     return "".join( filter(lambda x: ord(x)<128, title.lower()) )
 
 movies.sort(key=getAsciiTitle) 

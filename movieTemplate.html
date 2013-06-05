@@ -102,12 +102,16 @@ function MoviesCtrl($scope) {
         // add "All" genre to the beginning
         $scope.genres.unshift( allObj );
     }
-
+    
+    $scope.makeGoogleLink = function(str, domain) {
+        domain = domain ? encodeURIComponent(domain) : "";
+        return "http://www.google.com/search?q="+encodeURIComponent(str)+"&domains="+domain+"&sitesearch="+domain+"&btnI=Auf+gut+Gl%C3%BCck%21";
+    }
     $scope.makeWikiLink = function(str) {
-        return "http://www.google.com/search?q="+encodeURIComponent(str)+"&domains=http%3A%2F%2Fen.wikipedia.org&sitesearch=http%3A%2F%2Fen.wikipedia.org&btnI=Auf+gut+Gl%C3%BCck%21";
+        return $scope.makeGoogleLink(str, "http://en.wikipedia.org");
     }
     $scope.makeRottenLink = function(str) {
-        return "http://www.google.com/search?q="+encodeURIComponent(str)+"&domains=http%3A%2F%2Frottentomatoes.com&sitesearch=http%3A%2F%2Frottentomatoes.com&btnI=Auf+gut+Gl%C3%BCck%21";
+        return $scope.makeGoogleLink(str, "http://rottentomatoes.com");
     }
 
     $scope.getPath = function(movie) {
@@ -143,7 +147,7 @@ function MoviesCtrl($scope) {
 
                         <div class="row">
                             <div class="span2">
-                                <a href="{{makeWikiLink(movie.title)}}" target="_blank" ng-show="omdb">
+                                <a href="{{makeWikiLink(movie.title+' film '+omdb.Year)}}" target="_blank" ng-show="omdb">
                                     <img src="{{omdb.Poster}}" ng-show="omdb.Poster && omdb.Poster != 'N/A'" width="150" />
                                 </a>
                                 <ul class="ratings" ng-show="omdb">
@@ -169,8 +173,9 @@ function MoviesCtrl($scope) {
                                         <span ng-show="omdb">{{movie.runtime}}<span ng-show="movie.quality">,</span> </span>
                                         <span ng-show="movie.quality">{{movie.quality}}</span>
                                     </li>
-                                    <li ng-show="omdb">
-                                        Director: <a href="{{makeWikiLink(omdb.Director+' director')}}" target="_blank">{{omdb.Director}}</a>
+                                    <li ng-show="omdb">Director:
+                                        <a href="{{makeWikiLink(omdb.Director+' director')}}"
+                                            target="_blank">{{omdb.Director}}</a>
                                     </li>
                                     <li class="actors" ng-show="omdb">
                                         <span>Actors: </span>
@@ -178,6 +183,11 @@ function MoviesCtrl($scope) {
                                             <a href="{{makeWikiLink(actor+' actor')}}" target="_blank">{{actor}}</a>
                                             <span ng-hide="$last">,</span> 
                                         </span>
+                                    </li>
+                                    <li>
+                                        <a target="_blank" href="{{path}}">File</a>, 
+                                        <a target="_blank"
+                                            href="{{makeGoogleLink(movie.title+' trailer hd '+movie.year)}}">Trailer</a>
                                     </li>
                                 </ul>
                                 
