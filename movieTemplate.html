@@ -143,7 +143,7 @@ function MoviesCtrl($scope) {
 
                         <div class="row">
                             <div class="span2">
-                                <a href="{{path}}" target="_blank" ng-show="omdb">
+                                <a href="{{makeWikiLink(movie.title)}}" target="_blank" ng-show="omdb">
                                     <img src="{{omdb.Poster}}" ng-show="omdb.Poster && omdb.Poster != 'N/A'" width="150" />
                                 </a>
                                 <ul class="ratings" ng-show="omdb">

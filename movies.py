@@ -1,19 +1,23 @@
 #!/usr/bin/env python
 
-import sys, os, re, json, urllib, requests, time, HTMLParser
+import sys, os, re, json, urllib, requests, time, codecs, HTMLParser, argparse
 from datetime import date
 
 # words ignored in a filename when searching on the internets
-blacklist = map(lambda x:x.lower(), ["directorscut", "dts", "aac", "ac3", "uk-release", "release", "screener", "uncut", "cd1", "cd2"] )
+blacklist = map(lambda x:x.lower(), 
+    ["directorscut", "dts", "aac", "ac3", "uk-release", "release", "screener", "uncut", "cd1", "cd2"] )
 
+# if found in a filename, ignore that file
 filenameBlacklist = ["CD2", "CD3", "CD4"]
+
+templateDefaultName = os.path.dirname(__file__) + '/movieTemplate.html'
 
 htmlParser = HTMLParser.HTMLParser()
 
 def getMovie(filename):
     "Reads out details from a movie title filename string and returns a dictionary contaning imdb info"
     
-    filename = os.path.basename(filename)
+    filename = unicode( os.path.basename(filename), 'utf-8')
 
     # title
     upperCaseTitle = filename
@@ -117,9 +121,8 @@ def fillInFromOmdb(movie):
         gquery = 'http://www.google.com/search?q='+urllib.quote_plus(movie['title'])+' film'+'&domains=http%3A%2F%2Fimdb.com&sitesearch=http%3A%2F%2Fimdb.com&btnI=Auf+gut+Gl%C3%BCck%21'
         
         gr = requests.get(gquery, headers={'Accept-Language': 'en-US'})
-        #TODO: check if redirected to imdb or stayed at google
         matches = re.findall(r'<title>.*</title>', gr.content)
-        if matches:
+        if matches and "site:http://imdb.com" not in matches[0]:
             title = matches[0][7:-15]
             tmatch = re.findall(r' \([a-zA-Z0-9 ]*\)$', title)
             if tmatch:
@@ -132,7 +135,7 @@ def fillInFromOmdb(movie):
             else:
                 movie['genres'] = ["Unknown"]
                 movie['title'] = movie['upperCaseTitle']
-                print "couldn't find anywhere: " + movie['title'] + ", " + movie['year']
+                print "couldn't find anywhere: " + title + ", " + movie['year']
 
     return movie
 
@@ -141,6 +144,7 @@ def checkAndFillIn(movie, movies):
     filenames = []
     for m in movies:
         filenames.append( m['filename'] )
+    
     if not movie['filename'] in filenames:
         movies.append( fillInFromOmdb(movie) )
         time.sleep(1)
@@ -150,35 +154,42 @@ def checkAndFillIn(movie, movies):
 
 # MAIN
 
-if len(sys.argv) <= 2:
-    print "usage: movies.py movie-directory file.json"
-    print "       Searches movie-directory recursively for movie files and"
-    print "       writes IMDB information into file.json."
-    print "       Filenames should be of format: 'US-Title (Year) 720p.mkv'"
-    print "       Empty folders are treated as movies names as well, other"
-    print "       folders are ignored. Semicolons (;) are treated as colons (:)"
-    print "       in names."
-    sys.exit(0)
+desc = """Searches directory recursively for movie files and
+       writes IMDB information into _movies.html.
+       Filenames should be of format: 'US-Title (Year) 720p.mkv'
+       Empty folders are treated as movie names as well, other
+       folders are ignored. Semicolons (;) are treated as colons (:)
+       in names. Multipart files should contain 'CD1' or 'CD2'."""
 
-rootdir = sys.argv[1]
+parser = argparse.ArgumentParser(description=desc)
+parser.add_argument('--cache', help='reads from and/or writes a json cache file')
+parser.add_argument('--template', help='HTML template file to use (contains the string %%%%%%%%%%json%%%%%%%%%% where the json will be filled in)', default=templateDefaultName)
+parser.add_argument('directory', help='the directory to search for movie files')
+
+args = parser.parse_args()
+
+rootdir = args.directory
 if not os.path.isdir(rootdir):
-    print "Error: first argument must be a directory"
+    print "Error: please supply a directory"
     sys.exit(0)
 
-jsonfile = sys.argv[2]
-
-try:
-    # if jsonfile already exists, read in movies
-    f = open(jsonfile, 'r')
-    movies = json.loads( f.read() )
-    f.close()
-except IOError:
+if args.cache:
+    jsonfile = args.cache
+    try:
+        # if jsonfile already exists, read in movies
+        f = codecs.open(jsonfile, 'r', 'utf-8')
+        movies = json.loads( f.read() )
+        # remove movies that weren't found on omdb the last time
+        movies = filter(lambda m: "omdb" in m, movies)
+        f.close()
+    except IOError:
+        movies = []
+else:
+    jsonfile = False
     movies = []
 
-f = open(jsonfile, 'w')
-
 def isNotHiddenFile(filename):
-    return len( re.findall(r'^\.', filename) ) == 0
+    return len( re.findall(r'^\.', os.path.basename(filename)) ) == 0
 
 def filterHiddenFiles(files):
     return filter(isNotHiddenFile, files)
@@ -215,7 +226,21 @@ def getAsciiTitle(movie):
     return "".join( filter(lambda x: ord(x)<128, title.lower()) )
 
 movies.sort(key=getAsciiTitle) 
+json = json.dumps(movies)
 
-f.write( json.dumps(movies) )
-f.close()
+# write cache file
+if jsonfile:
+    f = codecs.open(jsonfile, 'w', 'utf-8')
+    f.write(json)
+    f.close()
 
+# write _movies.html
+tf = codecs.open(args.template, 'r', 'utf-8')
+html = tf.read()
+
+html = html.replace("%%%%%json%%%%%", json)
+
+out = codecs.open("_movies.html", 'w', 'utf-8')
+out.write(html)
+out.close()
+tf.close()
