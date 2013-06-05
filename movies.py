@@ -168,11 +168,12 @@ except IOError:
 
 f = open(jsonfile, 'w')
 
-for root, subFolders, files in os.walk(rootdir):
+def isHiddenFile(filename):
+    return len( re.findall(r'^\.', filename) ) > 0 )
 
+for root, subFolders, files in os.walk(rootdir):
     for filename in files:
-        hiddenFilesMatches = re.findall(r'^.', filename)
-        if not hiddenFilesMatches:
+        if not isHiddenFile(filename):
             movie = getMovie(filename)
             if movie['suffix'] in ["mov", "mp4", "avi", "mkv", "mpg"]:
                 movie['isEmptyDir'] = False
@@ -182,8 +183,7 @@ for root, subFolders, files in os.walk(rootdir):
 
     if not os.listdir(root):
         # empty folder, treat as movie
-        hiddenFilesMatches = re.findall(r'\^.', root)
-        if not hiddenFilesMatches:
+        if not isHiddenFile(root):
             movie = getMovie(root)
             movie['isEmptyDir'] = True
             movie['path'] = os.path.abspath(root) 
