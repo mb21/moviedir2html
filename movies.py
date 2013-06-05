@@ -14,6 +14,10 @@ templateDefaultName = os.path.dirname(__file__) + '/movieTemplate.html'
 
 htmlParser = HTMLParser.HTMLParser()
 
+def toAscii(str):
+    return "".join( filter(lambda x: ord(x)<128, str) )
+
+
 def getMovie(filename):
     "Reads out details from a movie title filename string and returns a dictionary contaning imdb info"
     
@@ -115,7 +119,7 @@ def fillInFromOmdb(movie):
     res = askOmdb(movie)
     if not res:
         # search IMDB with Google's i'm feeling lucky
-        gquery = 'http://www.google.com/search?q='+urllib.quote_plus(movie['title'] + ' film')+'&domains=http%3A%2F%2Fimdb.com&sitesearch=http%3A%2F%2Fimdb.com&btnI=Auf+gut+Gl%C3%BCck%21'
+        gquery = 'http://www.google.com/search?q='+urllib.quote_plus( toAscii(movie['title']) + ' film')+'&domains=http%3A%2F%2Fimdb.com&sitesearch=http%3A%2F%2Fimdb.com&btnI=Auf+gut+Gl%C3%BCck%21'
         
         gr = requests.get(gquery, headers={'Accept-Language': 'en-US'})
         matches = re.findall(r'<title>.*</title>', gr.content)
@@ -132,7 +136,7 @@ def fillInFromOmdb(movie):
             else:
                 movie['genres'] = ["Unknown"]
                 movie['title'] = movie['upperCaseTitle']
-                print "couldn't find anywhere: '" + title + ", "' + movie['year']
+                print "couldn't find anywhere: '" + title + "', " + movie['year']
 
     return movie
 
@@ -231,7 +235,7 @@ def getAsciiTitle(movie):
     matches = re.findall(r'^(The |A )', title)
     if matches:
         title = title.replace(matches[0], "")
-    return "".join( filter(lambda x: ord(x)<128, title.lower()) )
+    return toAscii( title.lower() )
 
 movies.sort(key=getAsciiTitle) 
 json = json.dumps(movies)
