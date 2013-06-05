@@ -128,6 +128,7 @@ def fillInFromOmdb(movie):
             tmatch = re.findall(r' \([a-zA-Z0-9 ]*\)$', title)
             if tmatch:
                 title = title.replace(tmatch[0], "")
+                movie['year'] = tmatch[0][2:-1]
             print "found on IMDB with Google: " + matches[0] + " -> " + title
             movie['title'] = title
             res = askOmdb(movie)
