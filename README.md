@@ -2,7 +2,7 @@
 
 Searches a directory recursively for movie files and writes IMDB information into a HTML file.
 
-**Important:** Filenames should be in format: 'US-Title (Year) 720p.mkv'
+**Important:** Filenames should be in format: "Title (Year) 720p.mkv", where "720" may be any number and "mkv" may also be "mov", "mp4", "avi", or "mpg".
 
 The HTML is generated from the movieTemplate.html file which you can modify. The default contains a simplistic and beautiful GUI (rendered with AngularJS) to browse all movies and filter by categories and fulltext search.
 

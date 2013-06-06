@@ -6,7 +6,7 @@ from datetime import date
 # wait time in seconds between omdb requests
 requestSleepTime = 0.2
 
-# words ignored in a filename when searching on the internets (case insensitive)
+# words filtered out in a filename when searching on the internets (case insensitive)
 blacklist = ["directorscut", "dts", "aac", "ac3", "uk-release", "release", "screener", "uncut", "cd1", "cd2"]
 
 # if found in a filename, ignore that file
@@ -14,7 +14,7 @@ filenameBlacklist = ["CD2", "CD3", "CD4"]
 
 templateDefaultName = os.path.dirname(__file__) + '/movieTemplate.html'
 
-debugMode = True
+debugMode = False
 
 
 htmlParser = HTMLParser.HTMLParser()
@@ -170,7 +170,8 @@ def checkAndFillIn(movie, movies):
 
 desc = """Searches directory recursively for movie files and
        writes IMDB information into _movies.html.
-       Important: Filenames should be in format: 'US-Title (Year) 720p.mkv'
+       Important: Filenames should be in format: 'US-Title (Year) 720p.mkv',
+       where "720" may be any number and "mkv" may also be "mov", "mp4", "avi", or "mpg".
        Notes:
        Empty folders are treated as movie names as well, other
        folders are ignored. Semicolons (;) are treated as colons (:)
