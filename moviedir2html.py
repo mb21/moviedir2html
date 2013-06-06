@@ -1,18 +1,20 @@
 #!/usr/bin/env python
 
-import sys, os, re, json, urllib, requests, time, codecs, HTMLParser, argparse
+import sys, os, re, json, urllib, urllib2, time, codecs, HTMLParser, argparse, traceback
 from datetime import date
 
 # wait time in seconds between omdb requests
 requestSleepTime = 0.2
 
-# words ignored in a filename when searching on the internets
+# words ignored in a filename when searching on the internets (case insensitive)
 blacklist = ["directorscut", "dts", "aac", "ac3", "uk-release", "release", "screener", "uncut", "cd1", "cd2"]
 
 # if found in a filename, ignore that file
 filenameBlacklist = ["CD2", "CD3", "CD4"]
 
 templateDefaultName = os.path.dirname(__file__) + '/movieTemplate.html'
+
+debugMode = True
 
 
 htmlParser = HTMLParser.HTMLParser()
@@ -89,8 +91,10 @@ def fillInFromOmdb(movie):
             ("plot", "full")
         ]
         query = urllib.urlencode(parameters, True)
-        r = requests.get("http://www.omdbapi.com/?" + query)
-        omdb = json.loads(r.content)
+        req = urllib2.Request("http://www.omdbapi.com/?" + query)
+        response = urllib2.urlopen(req)
+        omdb = json.loads( response.read() )
+        response.close()
 
         if omdb['Response'] == "True" and omdb['Type'] == "movie":
             if len( omdb['tomatoRating'] ) == 1:
@@ -124,8 +128,13 @@ def fillInFromOmdb(movie):
         # search IMDB with Google's i'm feeling lucky
         gquery = 'http://www.google.com/search?q='+urllib.quote_plus( toAscii(movie['title']) + ' film')+'&domains=http%3A%2F%2Fimdb.com&sitesearch=http%3A%2F%2Fimdb.com&btnI=Auf+gut+Gl%C3%BCck%21'
         
-        gr = requests.get(gquery, headers={'Accept-Language': 'en-US'})
-        matches = re.findall(r'<title>.*</title>', gr.content)
+        req = urllib2.Request(url=gquery)
+        req.add_header('Accept-Language', 'en-US')
+        useragent = 'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.0.7) Gecko/2009021910 Firefox/3.0.7'
+        req.add_header('User-Agent', useragent)
+        gr = urllib2.urlopen(req)
+        matches = re.findall(r'<title>.*</title>', gr.read())
+        gr.close()
         if matches and "site:http://imdb.com" not in matches[0]:
             title = matches[0][7:-15]
             tmatch = re.findall(r' \([a-zA-Z0-9 ]*\)$', title)
@@ -161,13 +170,15 @@ def checkAndFillIn(movie, movies):
 
 desc = """Searches directory recursively for movie files and
        writes IMDB information into _movies.html.
-       Filenames should be of format: 'US-Title (Year) 720p.mkv'
+       Important: Filenames should be in format: 'US-Title (Year) 720p.mkv'
+       Notes:
        Empty folders are treated as movie names as well, other
        folders are ignored. Semicolons (;) are treated as colons (:)
-       in names. Multipart files should contain 'CD1' or 'CD2'."""
+       in names. Multipart files should contain 'CD1' or 'CD2',
+       only one entry will show up. The tool will only look up movies, no TV series."""
 
 parser = argparse.ArgumentParser(description=desc)
-parser.add_argument('--cache', help='generates or uses an existing json cache file, movies are never removed from the cache')
+parser.add_argument('--cache', help='generates or uses an existing json cache file. Movies are never removed from the cache, so you can supply the same cache file on different directories to accumulate movies.')
 parser.add_argument('--template', help='HTML template file to use (contains the string %%%%%%%%%%json%%%%%%%%%% where the json will be filled in), default is movieTemplate.html in the same directory as this script', default=templateDefaultName)
 parser.add_argument('directory', help='the directory to search for movie files')
 
@@ -218,6 +229,8 @@ for root, subFolders, files in os.walk(rootdir):
             except Exception as e:
                 print "Error in: " + filename
                 print e
+                if debugMode:
+                    print traceback.format_exc()
 
     if len(filterHiddenFiles( os.listdir(root) )) == 0 and isNotHiddenFile(root):
         # empty folder, treat as movie
@@ -230,6 +243,8 @@ for root, subFolders, files in os.walk(rootdir):
         except Exception as e:
             print "Error in: " + filename
             print e
+            if debugMode:
+                print traceback.format_exc()
 
 def titleSortKey(movie):
     if 'omdb' in movie:
@@ -251,12 +266,16 @@ if jsonfile:
     f.close()
 
 # write _movies.html
-tf = codecs.open(args.template, 'r', 'utf-8')
-html = tf.read()
+try:
+    tf = codecs.open(args.template, 'r', 'utf-8')
+    html = tf.read()
 
-html = html.replace("%%%%%json%%%%%", json)
+    html = html.replace("%%%%%json%%%%%", json)
 
-out = codecs.open("_movies.html", 'w', 'utf-8')
-out.write(html)
-out.close()
-tf.close()
+    out = codecs.open("_movies.html", 'w', 'utf-8')
+    out.write(html)
+    out.close()
+    tf.close()
+except Exception as e:
+    print e
+    print "Please put the file movieTemplate.html back in the same directory as the script, or supply your own with --template."

@@ -163,7 +163,7 @@ function MoviesCtrl($scope) {
                 <ul>
                     <li ng-repeat="movie in movies | filter:{genres: selectedGenre.name} | filter:search" class="movie"
                         ng-init="omdbLink='http://imdb.com/title/' + movie.omdb.imdbID; omdb=movie.omdb; path=getPath(movie)" >
-                        <h2><a href="{{path}}" target="_blank">{{omdb.Title || movie.title}}
+                        <h2 title="Drag into your preferred video player"><a href="{{path}}" target="_blank">{{omdb.Title || movie.title}}
                             <span ng-show="movie.isEmptyDir"> (Not Downloaded)</span>
                         </a></h2>
 
@@ -210,7 +210,7 @@ function MoviesCtrl($scope) {
                                         </span>
                                     </li>
                                     <li>
-                                        <a target="_blank" href="{{path}}">File</a>, 
+                                        <a target="_blank" href="{{path}}" title="Drag into your preferred video player">File</a>, 
                                         <a target="_blank"
                                             href="{{makeGoogleLink(movie.title+' trailer hd '+movie.year)}}">Trailer</a>
                                     </li>
