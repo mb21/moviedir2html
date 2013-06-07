@@ -12,6 +12,7 @@ Notes:
 * Semicolons (;) are treated as colons (:) in names.
 * Multipart files should contain 'CD1' or 'CD2', only one entry will show up.
 * The tool will only look up movies, no TV series.
+* Requires Python 2.7.x
 
 ## Screenshot of output
 ![Screenshot](https://raw.github.com/mb21/moviedir2html/master/screenshot.jpg)
