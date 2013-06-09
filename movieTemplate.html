@@ -140,7 +140,7 @@ function MoviesCtrl($scope, $timeout) {
         tempFilterText = val;
         filterTextTimeout = $timeout(function() {
             $scope.filterText = tempFilterText;
-        }, 200)
+        }, 500)
     });
     $scope.setSearch = function(str){
         $scope.search = str;
@@ -243,8 +243,8 @@ function MoviesCtrl($scope, $timeout) {
                                 </ul>
                                 
                                 <div class="texts" ng-show="omdb">
-                                    <p><strong>Tomato Consensus:</strong> {{omdb.tomatoConsensus}}</p>
                                     <p><strong>Plot:</strong> {{omdb.Plot}}</p>
+                                    <p><strong>Tomato Consensus:</strong> {{omdb.tomatoConsensus}}</p>
                                 </div>
                             </div>
                         </div>
