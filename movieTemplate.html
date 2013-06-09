@@ -80,6 +80,9 @@ ul.ratings{
     width: 150px;
     height: 223px;
 }
+.wikiIcon {
+    height: 16px;
+}
 .searchBox {
     margin: 25px;
 }
@@ -88,15 +91,17 @@ ul.ratings{
 }
 </style>
 <script>
+
 var json = %%%%%json%%%%%;
 
-function MoviesCtrl($scope) {
+function MoviesCtrl($scope, $timeout) {
+
     $scope.movies = json;
     
+    // Genre dropdown
     var allObj = {"name": "All"};
     $scope.genres = [allObj];
     $scope.selectedGenre = allObj;
-
     $scope.init = function(){
         var genresArr = [];
         angular.forEach( $scope.movies, function(movie) {
@@ -116,15 +121,33 @@ function MoviesCtrl($scope) {
             $scope.genres.push( {"name": g} );
         });
     }
-
     $scope.selectGenre = function(genreName){
         angular.forEach( $scope.genres, function(g) {
             if (g.name == genreName) {
                 $scope.selectedGenre = g;
             }
         });
+        $scope.setSearch("");
     }
     
+    // set up fulltext search with delay
+    $scope.filterText = '';
+    var tempFilterText = '';
+    var filterTextTimeout;
+    $scope.$watch('search', function (val) {
+        if (filterTextTimeout) $timeout.cancel(filterTextTimeout);
+
+        tempFilterText = val;
+        filterTextTimeout = $timeout(function() {
+            $scope.filterText = tempFilterText;
+        }, 200)
+    });
+    $scope.setSearch = function(str){
+        $scope.search = str;
+        $scope.filterText = str;
+    };
+
+    // template helper functions
     $scope.makeGoogleLink = function(str, domain) {
         domain = domain ? encodeURIComponent(domain) : "";
         return "http://www.google.com/search?q="+encodeURIComponent(str)+"&domains="+domain+"&sitesearch="+domain+"&btnI=Auf+gut+Gl%C3%BCck%21";
@@ -135,7 +158,6 @@ function MoviesCtrl($scope) {
     $scope.makeRottenLink = function(str) {
         return $scope.makeGoogleLink(str, "http://rottentomatoes.com");
     }
-
     $scope.getPath = function(movie) {
         if (movie.isMultiPartMovie) {
             return movie.directory;
@@ -161,7 +183,7 @@ function MoviesCtrl($scope) {
                 </div>
 
                 <ul>
-                    <li ng-repeat="movie in movies | filter:{genres: selectedGenre.name} | filter:search" class="movie"
+                    <li ng-repeat="movie in movies | filter:{genres: selectedGenre.name} | filter:filterText" class="movie"
                         ng-init="omdbLink='http://imdb.com/title/' + movie.omdb.imdbID; omdb=movie.omdb; path=getPath(movie)" >
                         <h2 title="Drag into your preferred video player"><a href="{{path}}" target="_blank">{{omdb.Title || movie.title}}
                             <span ng-show="movie.isEmptyDir"> (Not Downloaded)</span>
@@ -199,14 +221,18 @@ function MoviesCtrl($scope) {
                                         <span ng-show="movie.quality">{{movie.quality}}</span>
                                     </li>
                                     <li ng-show="omdb">Director:
-                                        <a href="{{makeWikiLink(omdb.Director+' director')}}"
-                                            target="_blank">{{omdb.Director}}</a>
+                                        <a ng-click="setSearch(omdb.Director)" href="#">{{omdb.Director}}</a>
+                                        <a href="{{makeWikiLink(omdb.Director+' director')}}" target="_blank">
+                                            <img src="http://bits.wikimedia.org/favicon/wikipedia.ico"
+                                                class="wikiIcon" /></a>
                                     </li>
                                     <li class="actors" ng-show="omdb">
                                         <span>Actors: </span>
                                         <span ng-repeat="actor in movie.actors">
-                                            <a href="{{makeWikiLink(actor+' actor')}}" target="_blank">{{actor}}</a>
-                                            <span ng-hide="$last">,</span> 
+                                            <a ng-click="setSearch(actor)" href="#">{{actor}}</a>
+                                            <a href="{{makeWikiLink(actor+' actor')}}" target="_blank">
+                                                <img src="http://bits.wikimedia.org/favicon/wikipedia.ico"
+                                                    class="wikiIcon" /></a><span ng-hide="$last">,</span> 
                                         </span>
                                     </li>
                                     <li>
