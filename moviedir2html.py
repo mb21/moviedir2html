@@ -99,6 +99,8 @@ def fillInFromOmdb(movie):
         if omdb['Response'] == "True" and omdb['Type'] == "movie":
             if len( omdb['tomatoRating'] ) == 1:
                 omdb['tomatoRating'] = omdb['tomatoRating'] + ".0"
+            elif omdb['tomatoRating'] == "N/A":
+                omdb['tomatoRating'] = ""
             omdb['tomatoConsensus'] = htmlParser.unescape(omdb['tomatoConsensus'])
             movie['omdb'] = omdb
             movie['genres'] = map(unicode.strip, omdb['Genre'].split(",") )

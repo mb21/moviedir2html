@@ -31,6 +31,12 @@ ul.ratings{
     margin-left: 0;
     font-weight: bold;
 }
+ul.sortBy {
+    display: inline-block;
+    margin: -20px 0 0 15px;
+    position: relative;
+    top: 20px;
+}
 .ratings li {
     width: 35px;
     height: 45px;
@@ -39,6 +45,12 @@ ul.ratings{
     background: url('http://z-ecx.images-amazon.com/images/G/01/imdb/images/title/titlePageSprite-2288315300._V_.png');
     background-size: 230px;
     background-position: -152px -61px;
+}
+.ratings .abc {
+    color: black;
+    position: relative;
+    top: 15px;
+    padding-right: 0;
 }
 .ratings .imdb span {
     color: black;
@@ -97,6 +109,8 @@ var json = %%%%%json%%%%%;
 function MoviesCtrl($scope, $timeout) {
 
     $scope.movies = json;
+
+    $scope.sortOrder = '';
     
     // Genre dropdown
     var allObj = {"name": "All"};
@@ -180,11 +194,18 @@ function MoviesCtrl($scope, $timeout) {
 
                     <select ng-model="selectedGenre" ng-options="genre.name for genre in genres">
                     </select>
+                    
+                    <ul class="ratings sortBy">
+                        <a href="#" ng-click="sortOrder=''"><li class="sticker abc">ABC</li></a>
+                        <a href="#" ng-click="sortOrder='-omdb.imdbRating'"><li class="sticker imdb"></li></a>
+                        <a href="#" ng-click="sortOrder='-omdb.tomatoRating'"><li class="sticker rotten"></li></a>
+                    </ul>
                 </div>
 
                 <ul>
-                    <li ng-repeat="movie in movies | filter:{genres: selectedGenre.name} | filter:filterText" class="movie"
-                        ng-init="omdbLink='http://imdb.com/title/' + movie.omdb.imdbID; omdb=movie.omdb; path=getPath(movie)" >
+                    <li ng-repeat="movie in movies | orderBy:sortOrder | filter:{genres: selectedGenre.name} | filter:filterText"
+                        ng-init="omdbLink='http://imdb.com/title/' + movie.omdb.imdbID; omdb=movie.omdb; path=getPath(movie)"
+                        class="movie" >
                         <h2 title="Drag into your preferred video player"><a href="{{path}}" target="_blank">{{omdb.Title || movie.title}}
                             <span ng-show="movie.isEmptyDir"> (Not Downloaded)</span>
                         </a></h2>
