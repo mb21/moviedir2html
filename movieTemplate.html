@@ -241,11 +241,14 @@ function MoviesCtrl($scope, $timeout) {
                                         <span ng-show="omdb">{{movie.runtime}}<span ng-show="movie.quality">,</span> </span>
                                         <span ng-show="movie.quality">{{movie.quality}}</span>
                                     </li>
-                                    <li ng-show="omdb">Director:
-                                        <a ng-click="setSearch(omdb.Director)" href="#">{{omdb.Director}}</a>
-                                        <a href="{{makeWikiLink(omdb.Director+' director')}}" target="_blank">
-                                            <img src="http://bits.wikimedia.org/favicon/wikipedia.ico"
-                                                class="wikiIcon" /></a>
+                                    <li ng-show="omdb">
+                                        <span>Director: </span>
+                                        <span ng-repeat="director in movie.directors">
+                                            <a ng-click="setSearch(director)" href="#">{{director}}</a>
+                                            <a href="{{makeWikiLink(director+' director')}}" target="_blank">
+                                                <img src="http://bits.wikimedia.org/favicon/wikipedia.ico"
+                                                    class="wikiIcon" /></a><span ng-hide="$last">,</span>
+                                        </span>
                                     </li>
                                     <li class="actors" ng-show="omdb">
                                         <span>Actors: </span>

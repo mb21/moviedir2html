@@ -105,6 +105,7 @@ def fillInFromOmdb(movie):
             movie['omdb'] = omdb
             movie['genres'] = map(unicode.strip, omdb['Genre'].split(",") )
             movie['actors'] = map(unicode.strip, omdb['Actors'].split(",") )
+            movie['directors'] = map(unicode.strip, omdb['Director'].split(",") )
             movie['runtime'] = omdb['Runtime'].replace(" h ", ":").replace(" min", "")
             
             # "2:4" -> "2:04"
