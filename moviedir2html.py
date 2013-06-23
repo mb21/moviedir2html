@@ -1,6 +1,7 @@
 #!/usr/bin/env python
+# -*- coding: utf8 -*-
 
-import sys, os, re, json, urllib, urllib2, time, codecs, HTMLParser, argparse, traceback
+import sys, os, re, json, urllib, urllib2, time, codecs, HTMLParser, argparse, traceback, unicodedata
 from datetime import date
 
 # wait time in seconds between omdb requests
@@ -12,16 +13,17 @@ blacklist = ["directorscut", "dts", "aac", "ac3", "uk-release", "release", "scre
 # if found in a filename, ignore that file
 filenameBlacklist = ["CD2", "CD3", "CD4"]
 
-templateDefaultName = os.path.dirname(__file__) + '/movieTemplate.html'
+templateDefaultName = os.path.dirname(os.path.abspath(__file__)) + '/movieTemplate.html'
 
 debugMode = False
 
+def toAscii(str):
+    return unicodedata.normalize('NFKD', str).encode('ascii', 'ignore')
+    return unicodedata.normalize('NFKD', unicode(str)).encode('ascii', 'ignore')
 
 htmlParser = HTMLParser.HTMLParser()
-blacklist = map(lambda x:x.lower(), blacklist)
-
-def toAscii(str):
-    return "".join( filter(lambda x: ord(x)<128, str) )
+blacklist = map(lambda x:x.decode('utf8').lower(), blacklist)
+blacklist = map(lambda x:toAscii(x).lower(), blacklist)
 
 
 def getMovie(filename):
@@ -47,7 +49,8 @@ def getMovie(filename):
         year = ""
 
     # quality
-    qualityMatches = re.findall(r' ((\d)?\d{3})p', title)
+    title = re.sub(r' \(((\d)?\d{3}(p)?)?\s?(hd)?\)', ' \1', title)
+    qualityMatches = re.findall(r' ((\d)?\d{3}(p)?)', title)
     if qualityMatches:
         quality = qualityMatches[0][0].strip() + "p"
     elif title.find("dvdrip") > 0:
@@ -70,6 +73,7 @@ def getMovie(filename):
     upperCaseTitle = upperCaseTitle[:len(title)]
             
     movie = {}
+    movie['id'] = ''
     movie['filename'] = filename
     movie['title'] = title
     movie['year'] = year
@@ -90,6 +94,13 @@ def fillInFromOmdb(movie):
             ("tomatoes", "true"),
             ("plot", "full")
         ]
+        if movie['id']:
+            parameters = [
+                ("i", movie['id']),
+                ("y", movie['year']),
+                ("tomatoes", "true"),
+                ("plot", "full")
+            ]
         query = urllib.urlencode(parameters, True)
         req = urllib2.Request("http://www.omdbapi.com/?" + query)
         response = urllib2.urlopen(req)
@@ -108,6 +119,7 @@ def fillInFromOmdb(movie):
             movie['directors'] = map(unicode.strip, omdb['Director'].split(",") )
             movie['runtime'] = omdb['Runtime'].replace(" h ", ":").replace(" min", "")
             
+            movie['id'] = omdb['imdbID']
             # "2:4" -> "2:04"
             shortMatches = re.findall(r':\d$', movie['runtime'])
             if shortMatches:
@@ -137,6 +149,7 @@ def fillInFromOmdb(movie):
         req.add_header('User-Agent', useragent)
         gr = urllib2.urlopen(req)
         matches = re.findall(r'<title>.*</title>', gr.read())
+        imatch = re.findall(r'(tt[0-9]{7})', gr.geturl())
         gr.close()
         if matches and "site:http://imdb.com" not in matches[0]:
             title = matches[0][7:-15]
@@ -145,6 +158,8 @@ def fillInFromOmdb(movie):
                 title = title.replace(tmatch[0], "")
                 movie['year'] = tmatch[0][2:-1]
             print "found on IMDB with Google: " + matches[0] + " -> " + title
+            if imatch:
+                movie['id'] = imatch[0]
             movie['title'] = title
             res = askOmdb(movie)
             if res:
@@ -225,7 +240,7 @@ for root, subFolders, files in os.walk(rootdir):
                 movie = getMovie(filename)
                 if "CD1" in filename:
                     movie['isMultiPartMovie'] = True
-                if movie['suffix'] in ["mov", "mp4", "avi", "mkv", "mpg"]:
+                if movie['suffix'] in ["mov", "mp4", "avi", "mkv", "mpg", "m4v"]:
                     movie['isEmptyDir'] = False
                     movie['path'] = os.path.abspath(os.path.join(root, filename)) 
                     movie['directory'] = os.path.abspath(root) 
