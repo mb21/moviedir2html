@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-# -*- coding: utf8 -*-
 
 import sys, os, re, json, urllib, urllib2, time, codecs, HTMLParser, argparse, traceback, unicodedata
 from datetime import date
@@ -19,7 +18,6 @@ debugMode = False
 
 def toAscii(str):
     return unicodedata.normalize('NFKD', str).encode('ascii', 'ignore')
-    return unicodedata.normalize('NFKD', unicode(str)).encode('ascii', 'ignore')
 
 htmlParser = HTMLParser.HTMLParser()
 blacklist = map(lambda x:x.decode('utf8').lower(), blacklist)
@@ -49,15 +47,18 @@ def getMovie(filename):
         year = ""
 
     # quality
-    title = re.sub(r' \(((\d)?\d{3}(p)?)?\s?(hd)?\)', ' \1', title)
-    qualityMatches = re.findall(r' ((\d)?\d{3}(p)?)', title)
+    qualityMatches = re.findall(r' \(?((\d)?\d{3})p', title)
     if qualityMatches:
         quality = qualityMatches[0][0].strip() + "p"
     elif title.find("dvdrip") > 0:
         quality = "DVDRip"
+    elif re.findall(r' hd', title):
+        quality = "HD"
     else:
         quality = ""
     title = title.replace(quality.lower(), "")
+    title = title.replace(" hd", "").replace(" ()", "")
+
 
     # suffix
     suffixMatches = re.findall(r'\.\w{3}$', title)
