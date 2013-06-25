@@ -46,6 +46,9 @@ ul.sortBy {
     background-size: 230px;
     background-position: -152px -61px;
 }
+.ratings .datetime {
+    color: black;
+}
 .ratings .abc {
     color: black;
     position: relative;
@@ -172,12 +175,21 @@ function MoviesCtrl($scope, $timeout) {
     $scope.makeRottenLink = function(str) {
         return $scope.makeGoogleLink(str, "http://rottentomatoes.com");
     }
+    $scope.makeTPBLink = function(str) {
+        return "http://thepiratebay.sx/search/"+encodeURIComponent(str)+"/0/7/207";
+    }
     $scope.getPath = function(movie) {
         if (movie.isMultiPartMovie) {
             return movie.directory;
         } else {
             return movie.path;
         }
+    }
+
+    var monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    $scope.makeDate = function(timestamp) {
+        var date = new Date(timestamp*1000);
+        return date.getDate()+". "+ monthNames[ date.getMonth() ]+" "+date.getFullYear();
     }
 
 }
@@ -199,6 +211,7 @@ function MoviesCtrl($scope, $timeout) {
                         <a href="#" ng-click="sortOrder=''"><li class="sticker abc">ABC</li></a>
                         <a href="#" ng-click="sortOrder='-omdb.imdbRating'"><li class="sticker imdb"></li></a>
                         <a href="#" ng-click="sortOrder='-omdb.tomatoRating'"><li class="sticker rotten"></li></a>
+                        <a href="#" ng-click="sortOrder='-filedatetime'"><li class="sticker datetime">Creation Date</li></a>
                     </ul>
                 </div>
 
@@ -206,9 +219,9 @@ function MoviesCtrl($scope, $timeout) {
                     <li ng-repeat="movie in movies | orderBy:sortOrder | filter:{genres: selectedGenre.name} | filter:filterText"
                         ng-init="omdbLink='http://imdb.com/title/' + movie.omdb.imdbID; omdb=movie.omdb; path=getPath(movie)"
                         class="movie" >
-                        <h2 title="Drag into your preferred video player"><a href="{{path}}" target="_blank">{{omdb.Title || movie.title}}
-                            <span ng-show="movie.isEmptyDir"> (Not Downloaded)</span>
-                        </a></h2>
+                        <h2 title="Drag into your preferred video player"><a href="{{path}}" target="_blank">{{omdb.Title || movie.title}}</a>
+                            <a ng-show="movie.isEmptyDir" href="{{ makeTPBLink(omdb.Title) }}" target="_blank">(Not Downloaded)</a>
+                        </h2>
 
                         <div class="row">
                             <div class="span2">
@@ -260,9 +273,10 @@ function MoviesCtrl($scope, $timeout) {
                                         </span>
                                     </li>
                                     <li>
-                                        <a target="_blank" href="{{path}}" title="Drag into your preferred video player">File</a>, 
                                         <a target="_blank"
-                                            href="{{makeGoogleLink(movie.title+' trailer hd '+movie.year)}}">Trailer</a>
+                                            href="{{makeGoogleLink(movie.title+' trailer hd '+movie.year)}}">Trailer</a>, 
+                                        <a target="_blank" href="{{path}}" title="Drag into your preferred video player">File
+                                        ({{ makeDate(movie.filedatetime) }})</a>
                                     </li>
                                 </ul>
                                 

@@ -190,7 +190,7 @@ def checkAndFillIn(movie, movies):
 desc = """Searches directory recursively for movie files and
        writes IMDB information into _movies.html.
        Important: Filenames should be in format: 'US-Title (Year) 720p.mkv',
-       where "720" may be any number and "mkv" may also be "mov", "mp4", "avi", or "mpg".
+       where "720" may be any number and "mkv" may also be "mov", "mp4", "avi", "mpg", "m4v" or "divx".
        Notes:
        Empty folders are treated as movie names as well, other
        folders are ignored. Semicolons (;) are treated as colons (:)
@@ -241,10 +241,11 @@ for root, subFolders, files in os.walk(rootdir):
                 movie = getMovie(filename)
                 if "CD1" in filename:
                     movie['isMultiPartMovie'] = True
-                if movie['suffix'] in ["mov", "mp4", "avi", "mkv", "mpg", "m4v"]:
+                if movie['suffix'] in ["mov", "mp4", "avi", "mkv", "mpg", "m4v", "divx"]:
                     movie['isEmptyDir'] = False
                     movie['path'] = os.path.abspath(os.path.join(root, filename)) 
-                    movie['directory'] = os.path.abspath(root) 
+                    movie['directory'] = os.path.abspath(root)
+                    movie['filedatetime'] = os.path.getctime(movie['path'])
                     movies = checkAndFillIn(movie, movies)
             except Exception as e:
                 print "Error in: " + filename
@@ -259,6 +260,7 @@ for root, subFolders, files in os.walk(rootdir):
             movie['isEmptyDir'] = True
             movie['path'] = os.path.abspath(root) 
             movie['directory'] = os.path.abspath(root) 
+            movie['filedatetime'] = os.path.getctime(movie['path'])
             movies = checkAndFillIn(movie, movies)
         except Exception as e:
             print "Error in: " + filename
